@@ -1,4 +1,8 @@
 #ignore text files uwu
 *.txt
 
+#ignore test dir
 test/
+
+#ignore pycache
+multi_client/__pycache__

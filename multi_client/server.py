@@ -1,15 +1,17 @@
 import socket
 import threading
-
+import sys
+import ipPort_resolver
 
 clients={}
 hostname:str=""
+server_running = True#global flag to control server
 #to be implemented
 def broadcast(client_socket, addr):
     global clients
     #when a client sends a msg to server the server will send it to
     #all connected clients except for the client that sent the message
-    while True:
+    while server_running:
         try:
             #receive the data from clients first
             data = client_socket.recv(1024)
@@ -53,19 +55,27 @@ def broadcast(client_socket, addr):
         except (ConnectionResetError, ConnectionAbortedError, OSError):
             break
     print("\n"+f"Connection closed with: {addr}",end="\nYou>",flush=True)
+    
     # Remove client from dictionary before closing
     if client_socket in clients:
         del clients[client_socket]
 
     #clients.pop(client_socket, None)#this will remove the client obj in the dict and also its key
     client_socket.close()
+    #print(f"The server_running value is {server_running}")
+    
+
 
 def send_server_msg():
     global clients
+    global server_running
+   
+        
     while True:
         message:str=input("You>")
         if message.lower()=="exit":
             print("Shutting down the server...")
+            server_running = False
             for client in list(clients.keys()):
                 client.send(f"[Host]:{hostname}>Server is shutting down...".encode())
                 client.close()
@@ -78,24 +88,37 @@ def send_server_msg():
             except BrokenPipeError:
                 pass
 
+    
 def start_server():
     global clients
     global hostname
     servSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    hostIp:str="0.0.0.0"
-    hostPort:int=12345
+    valid_ip_and_port:bool=False
+    while not valid_ip_and_port:
+
+
+        hostIp:str=ipPort_resolver.get_ip("Enter IP to bind the server to; e.g. 0.0.0.0: ")
+        valid_ip:bool=ipPort_resolver.is_valid_ip(ip=hostIp)
+
+
+        hostPort:int=ipPort_resolver.get_port("Enter Port to listen to, must be > 1024; e.g. 12345:")
+        valid_port:bool=ipPort_resolver.is_valid_port(port=hostPort)
+
+        valid_ip_and_port=valid_ip and valid_port
 
     servSocket.bind((hostIp, hostPort))
     servSocket.listen(5)
+    servSocket.settimeout(1.0)
     print(f"Server is listening on {hostIp}:{hostPort}")
+
     hostname=str(input("Enter hostname: "))
 
     #server input thread for server socket
     input_thread=threading.Thread(target=send_server_msg, daemon=True)
     input_thread.start()
+    #print(f"The server_running value is {server_running}")
 
-
-    while True:
+    while server_running:
         try:
             cSocket,cAddr=servSocket.accept()
         
@@ -114,11 +137,17 @@ def start_server():
             #start the broadcast thread
             broadcastThread = threading.Thread(target=broadcast, args=(cSocket, cAddr))
             broadcastThread.start()
+        
+        except socket.timeout:
+            continue
 
         except KeyboardInterrupt:
             print("\nServer shutting down due to KeyboardInterrupt...")
             break
-
+    
     servSocket.close()
+    print("Server shutdown complete.")
 
-start_server()
+   
+
+#start_server()

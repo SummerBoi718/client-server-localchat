@@ -1,6 +1,6 @@
 import socket
 import threading
-
+import ipPort_resolver
 clientName:str=""
 def receive_messages(client_socket:socket.socket):
     
@@ -19,9 +19,16 @@ def receive_messages(client_socket:socket.socket):
 def start_client():
     global clientName
     client_socket:socket.socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_ip:str="0.0.0.0"#specify the host ip here
-    server_port:int=12345
+    valid_ip_and_port:bool=False
+    while not valid_ip_and_port:
+        
 
+        server_ip:str=ipPort_resolver.get_ip("Enter IP of the server you want to join; e.g. 192.168.63.0 : ")
+        valid_ip:bool=ipPort_resolver.is_valid_ip(server_ip)
+
+        server_port:int=ipPort_resolver.get_port("Enter Port to listen to, must be > 1024; e.g. 12345: ")
+        valid_port:bool=ipPort_resolver.is_valid_port(server_port)
+        valid_ip_and_port=valid_ip and valid_port
 
     try:
         client_socket.connect((server_ip, server_port))
@@ -43,9 +50,10 @@ def start_client():
 
     except ConnectionRefusedError:
         print("Connection failed. Make sure the server is running.")
-    
+    except (BrokenPipeError, ConnectionResetError):
+        print("Cant send message as server's already closed.")
     finally:
         client_socket.close()
         print("Connection closed.")
 
-start_client()
+

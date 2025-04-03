@@ -5,8 +5,8 @@ import ipPort_resolver
 
 clients={}
 hostname:str=""
-server_running = True#global flag to control server
-#to be implemented
+server_running:bool#global flag to control server
+
 def broadcast(client_socket, addr):
     global clients
     #when a client sends a msg to server the server will send it to
@@ -88,7 +88,11 @@ def send_server_msg():
             except BrokenPipeError:
                 pass
 
-    
+def set_server_running(val:bool):
+    global server_running
+    server_running = val
+
+
 def start_server():
     global clients
     global hostname
@@ -125,7 +129,7 @@ def start_server():
             username:str=cSocket.recv(1024).decode()
             clients[cSocket]=username
 
-            #print("\n"+f"Client {username}:{cAddr} connected.",end="\nYou>",flush=True)
+            
 
             join_message = f"{username} joined the room."
             print("\n"+join_message, end="\nYou>",flush=True)
@@ -147,7 +151,3 @@ def start_server():
     
     servSocket.close()
     print("Server shutdown complete.")
-
-   
-
-#start_server()

@@ -161,7 +161,7 @@ def start_server():
             username:str=cSocket.recv(1024).decode()
             clients[cSocket]=username
 
-            #print("\n"+f"Client {username}:{cAddr} connected.",end="\nYou>",flush=True)
+            
 
             join_message = f"{username} joined the room."
             print("\n"+join_message, end="\nYou>",flush=True)
@@ -183,7 +183,3 @@ def start_server():
     
     servSocket.close()
     print("Server shutdown complete.")
-
-   
-
-#start_server()

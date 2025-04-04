@@ -24,6 +24,12 @@ def send_password(client_socket):
             if not prompt:
                 break
             response = input(prompt)
+
+            # Avoid sending empty responses (just pressing Enter)
+            if not response.strip():
+                print("Password cannot be empty. Try again.")
+                continue
+            
             client_socket.send(response.encode())
 
             serverResponse = client_socket.recv(1024).decode()

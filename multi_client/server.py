@@ -50,7 +50,7 @@ def broadcast(client_socket, addr):
                         pass
                 
 
-        except (ConnectionResetError, ConnectionAbortedError, OSError):
+        except (ConnectionResetError, ConnectionAbortedError, OSError, socket.timeout):
             break
     print("\n"+f"Connection closed with: {addr}",end="\nYou>",flush=True)
     
@@ -77,7 +77,9 @@ def send_server_msg():
                 client.close()
             clients.clear()
             break
-        
+        elif "kick" in message.lower():
+            kick(message)
+
         for client in list(clients.keys()):
             try:
                 client.send(f"[Host]:{hostname}> {message}".encode())
@@ -101,22 +103,82 @@ def set_room_password():
 
 def ask_password(client_socket)->bool:
     tries:int=3
-    prompt:str=f"Please enter the room Password({tries}): ".encode()
+    
+
     while tries != 0:
-        client_socket.send(prompt)
-        response:str=client_socket.recv(1024).decode()
-        if response == roomPassword:
-            client_socket.send("200".encode())
-            return True
-            
-        else:
-            tries -= 1
-            if tries == 0:
-                client_socket.send("404".encode()) 
-                client_socket.close()
-                return False
+        try:
+
+            prompt:str=f"Please enter the room Password({tries}): ".encode()
+            client_socket.send(prompt)
+            response:str=client_socket.recv(1024).decode().strip()
+            if not response:
+                    print("No input received. Try again.")
+                    continue
+
+            if response == roomPassword:
+                client_socket.send("200".encode())
+                return True
+                
             else:
-                client_socket.send("304".encode())
+                tries -= 1
+                if tries == 0:
+                    client_socket.send("404".encode()) 
+                    client_socket.close()
+                    return False
+                else:
+                    client_socket.send("304".encode())
+        except socket.timeout:
+            print(f"Timeout reached. No input from the client.")
+            client_socket.send("404".encode())  # Close after timeout
+            client_socket.close()
+            return False
+        
+        except Exception as e:
+            print(f"Error during password check: {e}")
+            client_socket.send("404".encode())  # Close after error
+            client_socket.close()
+            return False
+
+def kick(msg):
+    global clients
+    
+    # Extract the username from the message
+    username_to_kick = msg.replace("kick", "").strip()
+    
+    if not username_to_kick:
+        print("Invalid command. You need to specify a username to kick.")
+        return
+    
+    # Find the client socket corresponding to the username
+    client_socket_to_kick = None
+    for client_socket, username in clients.items():
+        if username == username_to_kick:
+            client_socket_to_kick = client_socket
+            break
+    
+    if not client_socket_to_kick:
+        print(f"User '{username_to_kick}' not found in the room.")
+        return
+    
+    # Notify the kicked client
+    try:
+        client_socket_to_kick.send("You have been kicked by the host.".encode())
+    except:
+        pass  # In case the client has already disconnected
+    
+    # Close the client's connection and remove them from the clients dictionary
+    print(f"Kicking user '{username_to_kick}' from the room.")
+    client_socket_to_kick.close()
+    del clients[client_socket_to_kick]
+    
+    # Notify all other clients that the user has been kicked
+    kick_message = f"{username_to_kick} has been kicked from the room."
+    for client_socket in clients:
+        try:
+            client_socket.send(kick_message.encode())
+        except BrokenPipeError:
+            pass  # Handle clients that are already disconnected
+
 
 def start_server():
     global clients

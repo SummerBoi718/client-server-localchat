@@ -2,6 +2,7 @@ import socket
 import threading
 import ipPort_resolver
 clientName:str=""
+
 def receive_messages(client_socket:socket.socket):
     
     while True:
@@ -15,6 +16,31 @@ def receive_messages(client_socket:socket.socket):
             break
         except OSError:
             break
+def send_password(client_socket):
+    while True:
+        try:
+            prompt = client_socket.recv(1024).decode()
+            if not prompt:
+                break
+            response = input(prompt)
+            client_socket.send(response.encode())
+
+            serverResponse = client_socket.recv(1024).decode()
+            if serverResponse == "200":
+                print("Correct password! Joining room...")
+                break
+            elif serverResponse == "304":
+                print("Incorrect password. Try again.")
+            elif serverResponse == "404":
+                print("No more attempts left. Connection will close.")
+                client_socket.close()
+                return False
+        except:
+            print("Password validation failed or connection closed.")
+            return False
+
+        
+
 
 def start_client():
     global clientName
@@ -33,6 +59,7 @@ def start_client():
     try:
         client_socket.connect((server_ip, server_port))
         print(f"Connected to server {server_ip}:{server_port}")
+        send_password(client_socket)
 
         receive_thread=threading.Thread(target=receive_messages, args=(client_socket,))
         receive_thread.start()
@@ -52,8 +79,12 @@ def start_client():
         print("Connection failed. Make sure the server is running.")
     except (BrokenPipeError, ConnectionResetError):
         print("Cant send message as server's already closed.")
+    except OSError:
+        print("Connection to the server denied.")
+        client_socket.close()
     finally:
         client_socket.close()
         print("Connection closed.")
-
+    client_socket.close()
+    print("Client closed")
 

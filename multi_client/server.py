@@ -5,8 +5,8 @@ import ipPort_resolver
 
 clients={}
 hostname:str=""
-server_running = True#global flag to control server
-#to be implemented
+server_running = False#global flag to control server
+roomPassword:str=""
 def broadcast(client_socket, addr):
     global clients
     #when a client sends a msg to server the server will send it to
@@ -64,13 +64,11 @@ def broadcast(client_socket, addr):
     client_socket.close()
     #print(f"The server_running value is {server_running}")
     
-
-
 def send_server_msg():
     global clients
     global server_running
-   
-        
+
+
     while True:
         message:str=input("You>")
         if message.lower()=="exit":
@@ -88,7 +86,40 @@ def send_server_msg():
             except BrokenPipeError:
                 pass
 
-    
+def set_server_running(val:bool):
+    global server_running
+    server_running = val
+
+def set_room_password():
+    global roomPassword
+    while True:
+        password:str=input("Enter a password must be 6 chars: ")
+        if (len(password)) >= 6:
+            roomPassword = password
+            print(f"Password set to [{password}:[{roomPassword}]]")
+            break
+        else:
+            print(f"[password] is an invalid password!")
+
+def ask_password(client_socket)->bool:
+    tries:int=3
+    prompt:str=b"Please enter the room Password(): "
+    while tries != 0:
+        client_socket.send(prompt)
+        response:str=client_socket.recv(1024).decode()
+        if response == roomPassword:
+            client_socket.send("200".encode())
+            return True
+            
+        else:
+            tries -= 1
+            if tries == 0:
+                client_socket.send("404".encode())  # No more tries
+                client_socket.close()
+                return False
+            else:
+                client_socket.send("304".encode())  # Incorrect, try again
+
 def start_server():
     global clients
     global hostname
@@ -113,6 +144,8 @@ def start_server():
 
     hostname=str(input("Enter hostname: "))
 
+    set_room_password()
+
     #server input thread for server socket
     input_thread=threading.Thread(target=send_server_msg, daemon=True)
     input_thread.start()
@@ -121,7 +154,10 @@ def start_server():
     while server_running:
         try:
             cSocket,cAddr=servSocket.accept()
-        
+
+            if not ask_password(cSocket):
+                continue
+
             username:str=cSocket.recv(1024).decode()
             clients[cSocket]=username
 

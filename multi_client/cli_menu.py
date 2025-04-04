@@ -12,6 +12,7 @@ while True:
         case "h":
             #call the server methods here
             print("Initiating server...")
+            server.set_server_running(True)
             server.start_server()
 
         case "j":

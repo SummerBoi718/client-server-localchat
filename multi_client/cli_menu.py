@@ -1,6 +1,6 @@
-import client, server
+import client
+import server
 
-# user will be able to choose between hosting a room or joining a room
 
 prompt:str="H:Host a Room | J:Join a Room | X:Exit > "
 

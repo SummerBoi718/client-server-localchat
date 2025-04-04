@@ -1,6 +1,5 @@
 import socket
 import threading
-import sys
 import ipPort_resolver
 
 clients={}
@@ -34,8 +33,7 @@ def broadcast(client_socket, addr):
                         except BrokenPipeError:
                             pass
 
-                break  # Exit the loop and remove the client
-
+                break
 
             formatted_message = f"{username}>{data.decode()}"
             #display the msg on the server first
@@ -60,7 +58,7 @@ def broadcast(client_socket, addr):
     if client_socket in clients:
         del clients[client_socket]
 
-    #clients.pop(client_socket, None)#this will remove the client obj in the dict and also its key
+    
     client_socket.close()
     #print(f"The server_running value is {server_running}")
     
@@ -103,7 +101,7 @@ def set_room_password():
 
 def ask_password(client_socket)->bool:
     tries:int=3
-    prompt:str=b"Please enter the room Password(): "
+    prompt:str=f"Please enter the room Password({tries}): ".encode()
     while tries != 0:
         client_socket.send(prompt)
         response:str=client_socket.recv(1024).decode()
@@ -114,11 +112,11 @@ def ask_password(client_socket)->bool:
         else:
             tries -= 1
             if tries == 0:
-                client_socket.send("404".encode())  # No more tries
+                client_socket.send("404".encode()) 
                 client_socket.close()
                 return False
             else:
-                client_socket.send("304".encode())  # Incorrect, try again
+                client_socket.send("304".encode())
 
 def start_server():
     global clients
@@ -149,7 +147,7 @@ def start_server():
     #server input thread for server socket
     input_thread=threading.Thread(target=send_server_msg, daemon=True)
     input_thread.start()
-    #print(f"The server_running value is {server_running}")
+    
 
     while server_running:
         try:

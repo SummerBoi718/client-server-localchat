@@ -16,6 +16,7 @@ def receive_messages(client_socket:socket.socket):
             break
         except OSError:
             break
+
 def send_password(client_socket):
     while True:
         try:
